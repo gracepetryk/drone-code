@@ -1,37 +1,43 @@
+#include <MadgwickAHRS.h>
+#include <PID_AutoTune_v0.h>
+#include <Servo.h>
 #include <PID_v1.h>
+
 /* Authors: John Petryk and Henryk Viana
  * Arduino code for running the drone
  */
 
 //pins
-int frontMotorPin = 1;
-int backMotorPin = 2;
-int rightMotorPin = 3;
-int leftMotorPin = 4;
+Servo frontMotor
+Servo backMotor
+Servo rightMotor
+Servo leftMotor
+
+Madgwick filter;
 
 //pid perameters
-double pitchSetpoint, pitchInput, pitchOutput; // pitch PID perameters 
-double yawSetpoint, yawInput, yawOutput; // yaw PID perameters
-double rollSetpoint, rollInput, rollOutput; // roll PID perameters
-double altitudeSetpoint, altitudeInput, altitudeOutput; // altitude PID perameters
+float pitchSetpoint, pitchInput, pitchOutput; // pitch PID perameters 
+float yawSetpoint, yawInput, yawOutput; // yaw PID perameters
+float rollSetpoint, rollInput, rollOutput; // roll PID perameters
+float altitudeSetpoint, altitudeInput, altitudeOutput; // altitude PID perameters
 
 //PID objects - & symbols for global varables
-PID pitchPID(&pitchInput, &pitchOutput, &pitchSetpoint, 1, 1, 1, DIRECT);
-PID yawPID(&yawInput, &yawOutput, &yawSetpoint, 1, 1, 1, DIRECT);
-PID rollPID(&rollInput, &rollOutput, &rollSetpoint, 1, 1, 1, DIRECT);
+PID pitchPID(&pitchInput, &pitchOutput, &pitchSetpoint, 1, 0, 0, DIRECT);
+PID yawPID(&yawInput, &yawOutput, &yawSetpoint, 1, 0, 0, DIRECT);
+PID rollPID(&rollInput, &rollOutput, &rollSetpoint, 1, 0, 0, DIRECT);
 
-double PIDmin = 0.5;
-double PIDmax = 1.5;
+float PIDmin = 1;
+float PIDmax = sqrt(2);
 
-double powerMultiplier = 0;
+float powerMultiplier = 0; // min 0, max 1
 
 void setup() 
 {
     // initialize pins
-    pinMode(frontMotorPin, OUTPUT);
-    pinMode(backMotorPin, OUTPUT);
-    pinMode(rightMotorPin, OUTPUT);
-    pinMode(leftMotorPin, OUTPUT);
+    frontMotor.attach(13);
+    backMotor.attach(12);
+    rightMotor.attach(11);
+    backMotor.attach(10);
 
     // intialize PID's
     pitchPID.SetMode(AUTOMATIC);
@@ -44,6 +50,17 @@ void setup()
     rollPID.SetOutputLimits(PIDmin, PIDmax);
 }
 
+
+void applyMotorPower(PID pid, Servo primaryMotor, Servo secondaryMotor)
+{
+    int primaryPower = map(powerMultiplier*pid.Compute(), 0, sqrt(2), 30, 130);
+    int secondaryPower = map(powerMultiplier/pid.Compute(), 0, 1/sqrt(2), 30, 130);
+    primaryMotor.write(primaryPower);
+    secondaryMotor.write(seccondaryPower)
+}
+
+
+
 void loop() 
 {
     //TODO: add gyro and acclerometer code
@@ -53,5 +70,3 @@ void loop()
     yawPID.Compute();
     rollPID.Compute();
 }
-
-
