@@ -22,14 +22,15 @@
 #include <RHSPIDriver.h>
 #include <RHTcpProtocol.h>
 
+#include <SoftwareServo.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_LSM9DS0.h>
 #include <MadgwickAHRS.h>
 #include <PID_AutoTune_v0.h>
-#include <Servo.h>
 #include <PID_v1.h>
 #include <Wire.h>
 #include <SPI.h>
+
 
 /* Authors: John Petryk and Henryk Viana
  * Arduino code for running the drone
@@ -38,30 +39,30 @@
 RH_ASK driver; // coms driver
 
 //pins
-Servo frontMotor;
-Servo backMotor;
-Servo rightMotor;
-Servo leftMotor;
+SoftwareServo frontMotor;
+SoftwareServo backMotor;
+SoftwareServo rightMotor;
+SoftwareServo leftMotor;
 
 Madgwick filter;
 
 Adafruit_LSM9DS0 lsm = Adafruit_LSM9DS0();
 
 //pid perameters
-double pitchSetpoint, pitchInput, pitchOutput; // pitch PID perameters 
-double yawSetpoint, yawInput, yawOutput; // yaw PID perameters
-double rollSetpoint, rollInput, rollOutput; // roll PID perameters
-double altitudeSetpoint, altitudeInput, altitudeOutput; // altitude PID perameters
+double pitchSetpoint, pitchInput, pitchMultiplier; // pitch PID perameters 
+double yawSetpoint, yawInput, yawMultiplier; // yaw PID perameters
+double rollSetpoint, rollInput, rollMultiplier; // roll PID perameters
+double altitudeSetpoint, altitudeInput, altitudeMultiplier; // altitude PID perameters
 
 //PID objects - & symbols for global varables
-PID pitchPID(&pitchInput, &pitchOutput, &pitchSetpoint, 1, 0, 0, DIRECT);
-PID yawPID(&yawInput, &yawOutput, &yawSetpoint, 1, 0, 0, DIRECT);
-PID rollPID(&rollInput, &rollOutput, &rollSetpoint, 1, 0, 0, DIRECT);
+PID pitchPID(&pitchInput, &pitchMultiplier, &pitchSetpoint, 1, 0, 0, DIRECT);
+PID yawPID(&yawInput, &yawMultiplier, &yawSetpoint, 1, 0, 0, DIRECT);
+PID rollPID(&rollInput, &rollMultiplier, &rollSetpoint, 1, 0, 0, DIRECT);
 
-float PIDmin = 1;
-float PIDmax = sqrt(1.5);
+float PIDmin = 0.8;
+float PIDmax = 1.2;
 
-float powerMultiplier = 0; // min 0, max 1
+float powerMultiplier = 1; // min 0, max 1
 
 void setup() 
 {
@@ -72,11 +73,11 @@ void setup()
         Serial.println("init failed");
     }
     
-    // initialize pins
-    frontMotor.attach(13);
-    backMotor.attach(12);
-    rightMotor.attach(11);
-    backMotor.attach(10);
+    // initialize pins (order is clockwise)
+    frontMotor.attach(4);
+    rightMotor.attach(5);
+    backMotor.attach(6);
+    leftMotor.attach(7);
 
     // intialize PID's
     pitchPID.SetMode(AUTOMATIC);
@@ -88,33 +89,69 @@ void setup()
     yawPID.SetOutputLimits(PIDmin, PIDmax);
     rollPID.SetOutputLimits(PIDmin, PIDmax);
 
+    //initialize gyro
     lsm.begin();
-
     filter.begin(25);
 }
 
 
-void applyMotorPower(PID pid, Servo primaryMotor, Servo secondaryMotor)
+void applyMotorPower()
 {
-    int primaryPower = map(powerMultiplier*pid.Compute(), 0, PIDmax, 30, 130);
-    int secondaryPower = map(powerMultiplier/pid.Compute(), 0, 1/PIDmax, 30, 130);
-    primaryMotor.write(primaryPower);
-    secondaryMotor.write(secondaryPower);
+    double frontPitch = pitchMultiplier;
+    double frontYaw = yawMultiplier;
+
+    double leftRoll = rollMultiplier;
+    double leftYaw = yawMultiplier;
+
+    double backPitch = pitchMultiplier;
+    double backYaw = yawMultiplier;
+
+    double rightRoll = pitchMultiplier;
+    double rightYaw = yawMultiplier;
+
+    if (pitchMultiplier >= 1)
+    {
+        frontPitch = 1 - (pitchMultiplier - 1); 
+    } else {
+        backPitch = 1 - (pitchMultiplier - 1);
+    }
+
+    if (yawMultiplier >= 1)
+    {
+        leftYaw, rightYaw = 1 - (yawMultiplier - 1);
+    } else {
+        frontYaw, leftYaw = 1 - (yawMultiplier - 1);
+    }
+
+    if (rollMultiplier >= 1)
+    {
+        leftRoll = 1 - (rollMultiplier - 1);
+    } else {
+        rightRoll = 1 - (rollMultiplier - 1);
+    }
+
+    frontMotor.write(map(frontPitch*frontYaw*powerMultiplier, 0, 1.44, 30, 130));
+    rightMotor.write(map(rightRoll*rightYaw*powerMultiplier, 0, 1.44, 30, 130));
+    backMotor.write(map(backPitch*backYaw*powerMultiplier, 0, 1.44, 30, 130));
+    leftMotor.write(map(leftRoll*leftYaw*powerMultiplier, 0, 1.44, 30, 130));
+
+
 }
 
-void readComms(String &message)
+
+
+void readComms(String &msg)
 {
-    unit8_t buf[64];
-    unit8_t buflen = sizeof(buf);
+    uint8_t buf[64];
+    uint8_t buflen = sizeof(buf);
     if (driver.recv(buf, &buflen))
     {
-        String msg = String((char*)buf)
+        msg = String((char*)buf);
     }
 }
 
 void loop()
 {
-    applyMotorPower(pitchPID, frontMotor, backMotor);
-    applyMotorPower(rollPID, frontMotor, backMotor);
+
     
 }
