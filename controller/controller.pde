@@ -17,7 +17,7 @@ String formatControls()
     String yaw = Float.toString(map(stick.getSlider("yaw").getValue(), -1,1,0.8,1.2));
     String roll = Float.toString(map(stick.getSlider("roll").getValue(), -1,1,0.8,1.2));
     String throttle = Float.toString(map(stick.getSlider("throttle").getValue(), -1,1,0,1));
-    return "p"+pitch+"y"+yaw+"r"+roll+"t"+throttle+";";
+    return "<p"+pitch+"y"+yaw+"r"+roll+"t"+throttle+"bL>";
 }
 
 void setup()
@@ -26,7 +26,7 @@ void setup()
     control = ControlIO.getInstance(this);
     stick = control.getMatchedDevice("dronecontrol");
     textSize(14);
-    arduino = new Serial(this, Serial.list()[1], 9600);
+    arduino = new Serial(this, Serial.list()[1], 57600);
     
 }
 
