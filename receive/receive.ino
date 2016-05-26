@@ -27,20 +27,40 @@ RH_ASK driver;
 
 void setup()
 {
-    Serial.begin(9600); // Debugging only
+    Serial.begin(57600); // Debugging only
     if (!driver.init())
          Serial.println("init failed");
 }
 
 void loop()
 {
-    uint8_t buf[12];
+    char controlString[64]; 
+    uint8_t buf[64];
     uint8_t buflen = sizeof(buf);
     if (driver.recv(buf, &buflen)) // Non-blocking
     {
       int i;
+      bool endOfMessage = false;
       // Message with a good checksum received, dump it.
       Serial.print("Message: ");
-      Serial.println((char*)buf);         
+      for(int i = 0; i < 64; i++)
+      {
+        if(buf[i] == (uint8_t) 'L')
+        {
+          endOfMessage = true;
+        }
+        if (!endOfMessage)
+        {
+          Serial.print((char)buf[i]);
+          controlString[i] = buf[i];
+        }
+      }
+      endOfMessage = false;
+      Serial.println(" ");
     }
+    delay(5);
+    
+    
+    
 }
+

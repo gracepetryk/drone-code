@@ -30,13 +30,17 @@
 #include <PID_v1.h>
 #include <Wire.h>
 #include <SPI.h>
+#include <stdlib.h>
 
 
 /* Authors: John Petryk and Henryk Viana
  * Arduino code for running the drone
  */
 
+Adafruit_LSM9DS0 lsm = Adafruit_LSM9DS0(1000);
+
 RH_ASK driver; // coms driver
+char controlString[64]; //string for input from joystick
 
 //pins
 SoftwareServo frontMotor;
@@ -54,6 +58,7 @@ double yawSetpoint, yawInput, yawMultiplier; // yaw PID perameters
 double rollSetpoint, rollInput, rollMultiplier; // roll PID perameters
 double altitudeSetpoint, altitudeInput, altitudeMultiplier; // altitude PID perameters
 
+
 //PID objects - & symbols for global varables
 PID pitchPID(&pitchInput, &pitchMultiplier, &pitchSetpoint, 1, 0, 0, DIRECT);
 PID yawPID(&yawInput, &yawMultiplier, &yawSetpoint, 1, 0, 0, DIRECT);
@@ -67,7 +72,7 @@ float powerMultiplier = 1; // min 0, max 1
 void setup() 
 {
     //initialize Comms
-
+    Serial.begin(57600);
     if(!driver.init())
     {
         Serial.println("init failed");
@@ -94,6 +99,55 @@ void setup()
     filter.begin(25);
 }
 
+float parseNum(char *str, char start, char stp, float bottom, float top, float lastValue)
+{   
+    bool bgn = false;
+    char buf[64];
+    int len = 0;
+    for (int i = 0; i < 64; i++)
+    {
+        //Serial.println(str[i]);
+        if ((str[i] == stp))
+        {
+          //Serial.println(", Stop");
+          bgn = false; 
+          len++;
+          break;
+        }
+        if (bgn)
+        {
+          //Serial.println(String(len) + "len");
+          buf[len] = str[i];
+          len++;
+          //Serial.println(buf[i]);
+          //Serial.println(", num");
+        }
+        if (str[i] == start)
+        {
+          bgn = true;
+          //Serial.println(", Start");
+        }
+        
+        //Serial.println(' ');
+        
+    }
+    //Serial.println(String(len) + "hello");
+    char num[len];
+    for (int i = 0; i < len; i++)
+    {
+       //Serial.println(buf[0] + "buffer");
+       num[i] = buf[i];
+    }
+    float value = atof(num);
+    if (value > top || value < bottom)
+    {
+      return lastValue;
+    }
+    else
+    {
+      return value;
+    }
+}
 
 void applyMotorPower()
 {
@@ -140,18 +194,49 @@ void applyMotorPower()
 
 
 
-void readComms(String &msg)
+void readComms(char *str)
 {
     uint8_t buf[64];
     uint8_t buflen = sizeof(buf);
-    if (driver.recv(buf, &buflen))
+    if (driver.recv(buf, &buflen)) // Non-blocking
     {
-        msg = String((char*)buf);
+      int i;
+      bool endOfMessage = false;
+      // Message with a good checksum received, dump it.
+      for(int i = 0; i < 63; i++)
+      {
+        if(buf[i] == (uint8_t) 'L')
+        {
+          endOfMessage = true;
+        }
+        if (!endOfMessage)
+        {
+          str[i] = (char)buf[i];
+        } else {
+          str[i] = ' ';
+        }
+      }
+      endOfMessage = false;
     }
 }
 
 void loop()
 {
-
+  readComms(controlString);
+  pitchInput = parseNum(controlString, 'p', 'y', -15, 15, pitchInput);
+  rollInput = parseNum(controlString, 'r', 't', -15, 15, rollInput);
+  yawInput = parseNum(controlString, 'y', 't', 0.8, 1.2, yawInput);
+  powerMultiplier = parseNum(controlString, 't', 'b', 0, 1, powerMultiplier);
+  Serial.print(pitchInput, 4);
+  Serial.print(" ");
+  Serial.print(rollInput, 4);
+  Serial.print(" ");
+  Serial.print(yawInput, 4);
+  Serial.print(" ");
+  Serial.println(powerMultiplier, 4);
+  
+  
+  applyMotorPower();
+  delay(10);
     
 }
