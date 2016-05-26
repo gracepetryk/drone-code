@@ -13,9 +13,9 @@ ControlDevice stick;
 Serial arduino;
 String formatControls()
 {
-    String pitch = Float.toString(map(stick.getSlider("pitch").getValue(), -1, 1, 0.8, 1.2));
+    String pitch = Float.toString(map(stick.getSlider("pitch").getValue(), -1, 1, 15, -15));
     String yaw = Float.toString(map(stick.getSlider("yaw").getValue(), -1,1,0.8,1.2));
-    String roll = Float.toString(map(stick.getSlider("roll").getValue(), -1,1,0.8,1.2));
+    String roll = Float.toString(map(stick.getSlider("roll").getValue(), -1,1,15,-15));
     String throttle = Float.toString(map(stick.getSlider("throttle").getValue(), -1,1,0,1));
     return "<p"+pitch+"y"+yaw+"r"+roll+"t"+throttle+"bL>";
 }

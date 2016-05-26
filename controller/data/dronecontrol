@@ -1,5 +1,5 @@
 Drone Controller
-roll	Roll	3	SLIDER	x	0	1.0	0.1
-pitch	pitch	3	SLIDER	y	0	1.0	0.1
-yaw	yaw	3	SLIDER	rz	0	1.0	0.1
+roll	Roll	3	SLIDER	x	0	1.0	0.15
+pitch	pitch	3	SLIDER	y	0	1.0	0.15
+yaw	yaw	3	SLIDER	rz	0	1.0	0.15
 throttle	throttle	3	SLIDER	slider	0	-1.0	0.0
