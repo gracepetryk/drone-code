@@ -45,7 +45,7 @@
 
 //gyro variables
 Adafruit_LSM9DS0 lsm = Adafruit_LSM9DS0(1000);
-Adafruit_Simple_AHRS ahrs(&lsm.getAccel, lsm.getMag);
+Adafruit_Simple_AHRS ahrs(&lsm.getAccel(), &lsm.getMag());
 
 
 //coms Varialbles
@@ -245,21 +245,21 @@ void readComms(char *str)
     }
 }
 
-void getGyro(double *pitch, double *roll)
+void getGyro()
 {
     sensors_vec_t orientation;
     if (ahrs.getOrientation(&orientation))
     {
         //pitch and roll are swaped because of how to gyro is placed on the drone
-        pitch = orientation.roll(); 
-        roll = orientation.pitch();
+        pitchInput = (double) orientation.roll; 
+        rollInput = (double) orientation.pitch;
     }
 }
 
 void loop()
 {
   readComms(controlString);
-  getGyro(pitchInput, rollInput);
+  getGyro();
   //set new setpoints for the PID's
   pitchSetpoint = parseNum(controlString, 'p', 'y', -15, 15, pitchSetpoint);
   rollSetpoint = parseNum(controlString, 'r', 't', -15, 15, rollSetpoint);
